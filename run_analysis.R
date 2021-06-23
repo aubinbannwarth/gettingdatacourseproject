@@ -85,9 +85,9 @@ human_activity_means <- human_activity %>%
   group_by(Subject, Activity) %>%
   summarize(across(everything(), ~ mean(.x, na.rm = TRUE)))
 
-# We can then export these tidy data sets as .csv:
+# We can then export these tidy data sets as .txt:
 
-write_csv(human_activity, "human_activity.csv")
+write.table(human_activity, "human_activity.txt", row.names = FALSE)
 
-write_csv(human_activity_means, "human_activity_means.csv")
+write.table(human_activity_means, "human_activity_means.txt", row.names = FALSE)
 

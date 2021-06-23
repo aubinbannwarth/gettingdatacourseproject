@@ -11,4 +11,4 @@ In this repository, you will find:
 * The *CodeBook.md* file, that explains the code in *run_analysis.R* step by step and provides additional information about
 the variable names, the two new data sets, and our overall approach.
 * An R Markdown file *CodeBook.Rmd* that was used to generate the Markdown file *CodeBook.md*
-* The two tidy datasets *human_activity.csv* and *human_activity_means.csv*.
+* The two tidy datasets *human_activity.txt* and *human_activity_means.txt*.

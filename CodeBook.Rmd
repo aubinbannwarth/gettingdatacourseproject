@@ -95,7 +95,7 @@ data$features
 
 ## The new "tidy" data sets
 
-From the 8 data frames in the **data** list, we will now generate two tidy data sets *human_activity.csv* and *human_activity_means.csv*.
+From the 8 data frames in the **data** list, we will now generate two tidy data sets *human_activity.txt* and *human_activity_means.txt*.
 
 Firstly, we know that we should keep only those variables corresponding to the means or standard deviations of some quantitites. We also know from reading *features_info.txt* that a set of 33 base signals were computed. For each of these signals, a number of variables were derived, including the mean and standard deviations. This means we should expect to select 2x33 = 66 variables to keep in our tidy data set. We achieve this by noting that the relevant variable names in the **features** frame will contain the text **-mean()** or **-std()**. Using **str_which()** and a regular expression, we can find which of the 561 features is a mean or standard deviation and save the corresponding column number in a variable, **var_cols**:
 
@@ -156,12 +156,12 @@ human_activity_means <- human_activity %>%
   summarize(across(everything(), ~ mean(.x, na.rm = TRUE)))
 ```
 
-Finally, we can export this now tidy data as *.csv* files:
+Finally, we can export this now tidy data as *.txt* files:
 
 ```{r }
-write_csv(human_activity, "human_activity.csv")
+write.table(human_activity, "human_activity.txt", row.names = FALSE)
 
-write_csv(human_activity_means, "human_activity_means.csv")
+write.table(human_activity_means, "human_activity_means.txt", row.names = FALSE)
 ```
 
 ## Summary of data set dimensions and variable names

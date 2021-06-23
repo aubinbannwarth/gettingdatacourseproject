@@ -163,7 +163,7 @@ list using its name, e.g. 
 ## The new “tidy” data sets
 
 From the 8 data frames in the **data** list, we will now generate two
-tidy data sets *human\_activity.csv* and *human\_activity\_means.csv*.
+tidy data sets *human\_activity.txt* and *human\_activity\_means.txt*.
 
 Firstly, we know that we should keep only those variables corresponding
 to the means or standard deviations of some quantitites. We also know
@@ -231,11 +231,11 @@ will have dimensions 180x68:
       group_by(Subject, Activity) %>%
       summarize(across(everything(), ~ mean(.x, na.rm = TRUE)))
 
-Finally, we can export this now tidy data as *.csv* files:
+Finally, we can export this now tidy data as *.txt* files:
 
-    write_csv(human_activity, "human_activity.csv")
+    write.table(human_activity, "human_activity.txt", row.names = FALSE)
 
-    write_csv(human_activity_means, "human_activity_means.csv")
+    write.table(human_activity_means, "human_activity_means.txt", row.names = FALSE)
 
 ## Summary of data set dimensions and variable names
 
