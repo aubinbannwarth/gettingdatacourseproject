@@ -1,0 +1,188 @@
+---
+title: "Course Project CodeBook"
+author: "Aubin Bannwarth"
+date: "23/06/2021"
+output:
+  md_document: default
+  html_document:
+    df_print: paged
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE)
+```
+## Prerequisites
+We will make use of the **tidyverse** packages, including **readr**, **dplyr**, **stringr**, and **forcats**, throughout. I invite you to check out Hadley Wickham's book [*R For Data Science*](https://r4ds.had.co.nz/), if you are not familiar with them.
+
+```{r }
+library(tidyverse)
+```
+
+## The original data set
+
+The original data set is obtained from [this website](http://archive.ics.uci.edu/ml/datasets/Human+Activity+Recognition+Using+Smartphones), which includes a description of the data and the experimental procedure. 
+
+The actual zipped directory containing all the data is downloaded [here](https://d396qusza40orc.cloudfront.net/getdata%2Fprojectfiles%2FUCI%20HAR%20Dataset.zip). We can use R to download and unzip the data set, including a check that we have not already done so!
+
+```{r }
+file_url <- "https://d396qusza40orc.cloudfront.net/getdata%2Fprojectfiles%2FUCI%20HAR%20Dataset.zip"
+
+if (!dir.exists("dataset")) {
+  temp <- tempfile()
+  download.file(file_url, temp)
+  unzip(temp, exdir = "dataset")
+  unlink(temp)
+}
+
+```
+
+Let's begin by creating a character vector, **paths**, of the full paths to all files in the newly created *dataset* directory by using **list_files()**:
+
+```{r }
+(paths <- list.files("dataset", recursive = TRUE, full.names = TRUE))
+```
+
+Examination of *README.txt* allows us to understand the roles that these files play.
+
+For our purposes, we need to know that each of 30 individuals or **Subjects**  performed 6 **Activities**, while wearing a smartphone on their waist that recorded some kinematic data (such as linear and angular acceleration components) over some amount of time at a given sampling rate. The activities range from SITTING to WALKING UPSTAIRS and are given numbers from 1 to 6 in *activity_labels.txt*. 
+
+The data was split into "train" and "test" groups, presumably for machine learning applications. This means that there are two sets of data, corresponding to the */train/* and */test/* sub directories we see above. 
+
+The raw data, which is available in the */Inertial Signals/* sub-directories of the zipped dataset, is not needed for our purposes. 
+Rather, we will be interested in the processed data that is in the *X_test.txt* and *X_train.txt* files. Each of these files contains 561 columns corresponding to the **features** (i.e. variables) that were computed from the raw data. The file *features.txt* lists the variable names for each column, and can be used to match each column of *X_test.txt* or *X_train.txt* to a descriptive variable name. Using *features_info.txt*, one may find additional information about how each variable is computed, and what the names mean.
+
+An observation (i.e. row in the table) gives the value of each feature in some "window" of time (see *README.txt* for an exact definition), for a specific **Subject** and **Activity**, but the values of the **Subject** and **Activity** variables need to be looked up separately in the single-column files *subject_train.txt* and *y_train.txt*, respectively. For example, the 5th entry in *subject_train.txt* gives the value of the **Subject** variable for the 5th row (observation) of *X_train.txt*. After parsing, we will be able to bind the columns in *subject_train.txt*, *y_train.txt* and *X_train.txt* to get a single tidy data frame.
+
+Similarly, *X_test.txt* will need to be combined with *subject_test.txt* and *y_test.txt*.
+
+The training and testing data frames can then be combined row-wise.
+
+Lastly, we note that *activity_labels.txt* provides a key that matches the activity numbers used in *y_train.txt* and *y_test.txt* with plain english descriptors of the activities. This will be used to replace the numbers with relevant labels in the **Activity** column of the final tidy data set.
+
+For now, let's use **str_subset()** to only keep those elements of **paths** that we are really interested in, by excluding the raw data and the read me and information files:
+
+```{r }
+paths <- paths %>% str_subset("Inertial|README|info", negate = TRUE)
+```
+
+We set the names of this new vector equal the base file name, then use **str_sub()** to remove the *.txt* extensions:
+```{r }
+names(paths) <- basename(paths) %>% str_sub(1,-5)
+```
+
+This allows us to get the full path to, for example, the *X_train.txt* file using:
+
+```{r }
+paths["X_train"]
+```
+
+
+## Reading the relevant data
+
+We may read all 8 files in **paths** at once using the **read_delim()** function and mapping it using **map()** onto each entry. Note that we arrived at the correct parameters for **read_delim()** by inspecting some of the *.txt* files using the system viewer:
+
+```{r }
+data <- paths %>%
+  map(read_delim, delim = " ", trim_ws = TRUE, col_names = FALSE)
+```
+
+Each individual data frame (or tibble to be precise, as we are using **read_delim()** from the **readr** package) can be accessed within the list using its name, e.g. 
+
+```{r}
+data$features
+```
+
+## The new "tidy" data sets
+
+From the 8 data frames in the **data** list, we will now generate two tidy data sets *human_activity.csv* and *human_activity_means.csv*.
+
+Firstly, we know that we should keep only those variables corresponding to the means or standard deviations of some quantitites. We also know from reading *features_info.txt* that a set of 33 base signals were computed. For each of these signals, a number of variables were derived, including the mean and standard deviations. This means we should expect to select 2x33 = 66 variables to keep in our tidy data set. We achieve this by noting that the relevant variable names in the **features** frame will contain the text **-mean()** or **-std()**. Using **str_which()** and a regular expression, we can find which of the 561 features is a mean or standard deviation and save the corresponding column number in a variable, **var_cols**:
+
+```{r}
+var_cols <- deframe(data$features) %>%  str_which("(-mean\\(\\))|(-std\\(\\))")
+
+var_names <- deframe(data$features)[var_cols]
+```
+
+Next, we can bind the **subject_**, **y_** and **X_** data frames using **bind_cols()**, for both the training and testing data, while also keeping only the relevant variables of the **X_** data frames:
+
+```{r }
+test <- bind_cols(data$subject_test, 
+                  data$y_test, 
+                  select(data$X_test, all_of(var_cols))
+)
+
+
+train <- bind_cols(data$subject_train, 
+                  data$y_train, 
+                  select(data$X_train, all_of(var_cols))
+)
+```
+
+We can now finally bind **test** and **train** row-wise into a **human_activity** set:
+```{r }
+human_activity <- bind_rows(test, train)
+```
+
+We add column names:
+```{r }
+
+names(human_activity) <- c("Subject", "Activity", var_names)
+
+```
+Right now, all the columns in **human_activity** are doubles, but the first two should be factors:
+
+```{r }
+human_activity <- human_activity %>% mutate(across(1:2, as.factor))
+```
+
+Lastly, we can use **data$activity_labels** to replace the numbers in the **Activity** column with the correct activity name.
+
+```{r}
+new_factors <- data$activity_labels %>% 
+  transmute(Activity = X2, Code = as.character(X1)) %>%
+  deframe() 
+
+human_activity <- human_activity %>% 
+  mutate(Activity = fct_recode(Activity, !!!new_factors))
+```
+
+That's it for the first table which is now tidy with correct variable names and descriptive activity names. For the second table, we simply group by **Activity** and **Subject** and take the mean of all the other columns. As there are 68 columns in **human_activity**, and 30x6 = 180 combinations of **Activity** and **Subject**, **human_activity_means** will have dimensions 180x68:
+
+```{r }
+human_activity_means <- human_activity %>% 
+  group_by(Subject, Activity) %>%
+  summarize(across(everything(), ~ mean(.x, na.rm = TRUE)))
+```
+
+Finally, we can export this now tidy data as *.csv* files:
+
+```{r }
+write_csv(human_activity, "human_activity.csv")
+
+write_csv(human_activity_means, "human_activity_means.csv")
+```
+
+## Summary of data set dimensions and variable names
+
+So we have two tidy data frames, **human_activity** and **human_activity_means**. Their dimensions are given by: 
+```{r}
+dim(human_activity)
+dim(human_activity_means)
+```
+
+We see that the **human_activity** frame has successfully captured all 10299 observations in the original dataset, which is the count that was listed on the webpage. **human_activity_means** has 180=30x6 as expected.
+
+The 68 variable names are the same in both tables, and are listed below for reference:
+
+```{r}
+names(human_activity)
+```
+
+The **Subject** and **Activity** columns represent the human subject (numbered 1 to 30) and the activity that the observation corresponds to. The next 66 variables are unchanged from their meaning in the original *features_info.txt*, where more information can be found about their meaning. The only difference in **human_activity_means** is that the values listed in these columns are the means of the values in **human_activity**, grouped by **Subject** and **Activity**. 
+
+
+
+
+
