@@ -2,7 +2,7 @@
 
 This is the repository for the course project in the *Getting and Cleaning Data* class on Coursera.
 
-The project consisted of creating two tidy data sets from the data set available at the [this website](http://archive.ics.uci.edu/ml/datasets/Human+Activity+Recognition+Using+Smartphones).
+The project consisted of creating two tidy data sets from the data set available at [this website](http://archive.ics.uci.edu/ml/datasets/Human+Activity+Recognition+Using+Smartphones).
 
 In this repository, you will find:
 
